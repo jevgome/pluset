@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Pluset \u2014 zyBooks practice",
+  "version": "0.1.0",
+  "description": "Turns your zyBooks sections into extra practice problems. Content stays on your computer.",
+  "action": {
+    "default_title": "Open Pluset"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://learn.zybooks.com/*",
+    "https://zyserver.zybooks.com/*",
+    "https://zytools.zybooks.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

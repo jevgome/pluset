@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# zyBooks content is copyrighted and may contain account data: never commit it.
+/samples/
+/activity_data.json
+/participation_data.json
+/5.json
+__pycache__/
+*.pyc

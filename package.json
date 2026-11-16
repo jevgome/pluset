@@ -1,0 +1,29 @@
+{
+  "name": "pluset",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser extension that turns zyBooks sections into extra practice problems.",
+  "scripts": {
+    "prebuild": "node scripts/check-node.cjs",
+    "build": "tsc --noEmit && vite build",
+    "watch": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/check-node.cjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "katex": "^0.19.1",
+    "pyodide": "^314.0.8"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

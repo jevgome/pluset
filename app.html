@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pluset</title>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1 class="brand">Pluset <span class="brand__sub">zyBooks practice</span></h1>
+
+        <section class="panel">
+          <h2>1. Connect</h2>
+          <p class="hint">Log into zyBooks in another tab and open your book.</p>
+          <button id="connect" type="button">Connect to zyBooks</button>
+          <p id="connect-status" class="status" role="status"></p>
+          <label class="field">
+            <span>Book code</span>
+            <input id="book" type="text" placeholder="e.g. UCONNME2250VivonaFall2026" spellcheck="false" autocomplete="off" />
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>2. Capture sections</h2>
+          <label class="field">
+            <span>Sections</span>
+            <input id="spec" type="text" placeholder="8.5, 8.1-8.4, or 8 for a whole chapter" spellcheck="false" autocomplete="off" />
+          </label>
+          <button id="fetch" type="button">Capture</button>
+          <ol id="fetch-log" class="log" aria-live="polite"></ol>
+        </section>
+
+        <section class="panel panel--grow">
+          <h2>Library</h2>
+          <div id="library" class="library"></div>
+          <label class="import">
+            <input id="import" type="file" accept=".json,application/json" multiple hidden />
+            <span class="link-button">Import a saved section response (.json)</span>
+          </label>
+        </section>
+      </aside>
+
+      <main id="viewer" class="viewer">
+        <div class="empty">
+          <h2>Nothing open yet</h2>
+          <p>Capture some sections, then pick one from the library to check what was captured.</p>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="./src/app/main.ts"></script>
+  </body>
+</html>
