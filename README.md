@@ -40,7 +40,7 @@ After rebuilding, click the reload icon on the extension card.
 4. Pick a section in the library to check what was captured.
 
 The library viewer doesn't show answers to the book's own activities; for those, use
-the Explain popup on the zyBooks page (below) when you want them.
+the Show answer buttons on the zyBooks page (below) when you want them.
 
 Each challenge activity has a **Practice a new version** button. It runs the book's own
 generator code (in Python, inside the browser via Pyodide) with fresh random values, checks
@@ -83,21 +83,16 @@ sections in the library and click **Generate AI problems**. Each run:
 Saved problems appear under each section and in practice sessions. The result panel shows
 what was rejected and why, plus token usage and an estimated cost.
 
-## Explain popup on zyBooks pages
+## Show answer buttons on zyBooks pages
 
-On any section page at learn.zybooks.com there's an **Explain** button in the bottom-right
-corner. It opens a popup listing every question in that section (it captures the section
-into your library first if it isn't there yet):
+On any section page at learn.zybooks.com, each question of a participation activity gets
+its own **Show answer** button (definition-matching activities get one for the whole
+activity). Clicking it reveals the book's answer and explanation for just that question.
+The section is captured into your library first if it isn't there yet.
 
-- Choose a question from the dropdown, or click **Pick on page** and then click the
-  question you're working on.
-- Participation activities show the book's answer and explanation right away.
-  **Explain step by step** asks Claude (your AI settings) for numbered reasoning.
-- Challenge activities are randomized per student, so **Solve my version** sends the
-  problem as your page shows it, and Claude works out your answer and the steps.
-
-The popup never types into or submits anything on the page. After reloading the
-extension, reload the zyBooks tab so the popup reconnects.
+Challenge activities are randomized per student and have no fixed answer in the book, so
+they get no button. Nothing is typed into or submitted on the page. After reloading the
+extension, reload the zyBooks tab so the buttons reconnect.
 
 ## Tests with real data
 

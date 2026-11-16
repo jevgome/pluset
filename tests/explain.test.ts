@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import type { Section } from '../src/core/model';
 import { normalizeSectionResponse } from '../src/core/normalize';
 import { explainItems } from '../src/explain/items';
-import { explainInstructions } from '../src/explain/prompt';
 
 const rich = (html: string) => ({ html, images: [] });
 
@@ -54,22 +53,17 @@ describe('explainItems', () => {
       ['3:0', '3.2.2', 1], // the animation is participation 3.2.1 and activity 0
       ['4:0', '3.2.3', 2],
       ['4:1', '3.2.3', 2],
-      ['5:0', '3.2.1', 3], // challenge activities are numbered separately
     ]);
   });
 
   it('carries the book’s answers and explanations', () => {
     expect(items[0]).toMatchObject({ bookAnswer: 'Red', bookExplanation: 'Red is warm.' });
-    expect(items[0]!.prompt).toContain('b) Red');
     expect(items[1]).toMatchObject({ bookAnswer: '4 (also accepted: four)', bookExplanation: 'Add them.' });
     expect(items[2]).toMatchObject({ bookAnswer: '9', bookExplanation: null });
-    expect(items[3]).toMatchObject({ kind: 'challenge', bookAnswer: null });
   });
 
-  it('asks about the student’s own version of a challenge', () => {
-    const text = explainInstructions(items[3]!, 'Given x = 7, find y.');
-    expect(text).toContain('Given x = 7, find y.');
-    expect(text).toContain('challenge activity 3.2.1');
+  it('skips challenge activities, which have no fixed answer', () => {
+    expect(items.some((i) => i.blockId === 5)).toBe(false);
   });
 });
 
@@ -80,7 +74,7 @@ describe.skipIf(!samplePath)('explainItems (real section)', () => {
   it('finds questions and answers', () => {
     const items = explainItems(normalizeSectionResponse(JSON.parse(readFileSync(samplePath!, 'utf8')), 'BOOK'));
     expect(items.length).toBeGreaterThan(0);
-    expect(items.some((i) => i.kind !== 'challenge' && i.bookAnswer)).toBe(true);
+    expect(items.every((i) => i.bookAnswer)).toBe(true);
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length);
   });
 });

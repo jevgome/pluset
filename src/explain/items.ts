@@ -1,8 +1,7 @@
-// Turns a captured section into the list of questions the on-page "Explain" popup
-// offers, one entry per question of each activity, with the book's own answer and
-// explanation when the book provides them (participation activities). Challenge
-// activities are randomized per student, so their answer has to be worked out from
-// the problem shown on the page.
+// Turns a captured section into the answers the on-page "Show answer" buttons
+// display: one entry per question of each participation activity, with the book's
+// own answer and explanation. Challenge activities are randomized per student and
+// the book has no fixed answer for them, so they get no entry.
 //
 // Pure (no DOM): runs in the service worker and in tests.
 
@@ -11,7 +10,7 @@ import { sectionLabel } from '../core/model';
 import { expandZyMarkup, normalizeLatex } from '../core/zymarkup';
 import { htmlToText } from '../ai/text';
 
-export type ExplainKind = 'multipleChoice' | 'shortAnswer' | 'definitionMatch' | 'challenge';
+export type ExplainKind = 'multipleChoice' | 'shortAnswer' | 'definitionMatch';
 
 export interface ExplainItem {
   /** Stable key: "<block id>:<question index>". */
@@ -22,20 +21,15 @@ export interface ExplainItem {
   /** Activity number as zyBooks shows it, e.g. "8.5.3" (participation and challenge are numbered separately). */
   number: string;
   kind: ExplainKind;
-  caption: string;
+  /** Question within the activity; definition matching has a single entry for the whole activity. */
   questionIndex: number;
-  /** Short label for the dropdown. */
-  label: string;
-  /** Question text (plain text, LaTeX left in \( \) form). */
-  prompt: string;
-  /** The book's answer, when it has one (not for challenge activities). */
-  bookAnswer: string | null;
+  /** The book's answer (plain text, LaTeX left in \( \) form). */
+  bookAnswer: string;
   bookExplanation: string | null;
 }
 
 const txt = (html: string) => htmlToText(normalizeLatex(expandZyMarkup(html))).trim();
 const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
-const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 export function explainItems(section: Section): ExplainItem[] {
   const items: ExplainItem[] = [];
@@ -47,43 +41,36 @@ export function explainItems(section: Section): ExplainItem[] {
   for (const b of section.blocks) {
     if (b.kind === 'text' || b.kind === 'container' || b.kind === 'unknown') continue;
     // Animations are numbered as participation activities on the page but have no questions.
-    const isChallenge = b.kind === 'challenge';
-    const number = `${label}.${isChallenge ? ++challenge : ++participation}`;
+    const number = `${label}.${b.kind === 'challenge' ? ++challenge : ++participation}`;
     const index = activityIndex++;
-    if (b.kind === 'animation') continue;
-
-    const caption = oneLine(htmlToText(b.caption));
-    const base = { blockId: b.id, activityIndex: index, number, kind: b.kind, caption };
-    const head = `${isChallenge ? 'Challenge' : 'Activity'} ${number}`;
+    const base = { blockId: b.id, activityIndex: index, number };
 
     switch (b.kind) {
       case 'multipleChoice':
         b.questions.forEach((q, i) => {
           const correct = q.choices.filter((c) => c.correct);
-          const prompt = txt(q.prompt.html);
+          if (!correct.length) return;
           items.push({
             ...base,
+            kind: b.kind,
             key: `${b.id}:${i}`,
             questionIndex: i,
-            label: `${head} Q${i + 1}: ${clip(oneLine(prompt), 70)}`,
-            prompt: [prompt, ...q.choices.map((c, j) => `${String.fromCharCode(97 + j)}) ${oneLine(txt(c.label.html))}`)].join('\n'),
-            bookAnswer: correct.map((c) => oneLine(txt(c.label.html))).join(' / ') || null,
+            bookAnswer: correct.map((c) => oneLine(txt(c.label.html))).join(' / '),
             bookExplanation: correct.map((c) => txt(c.explanation.html)).filter(Boolean).join('\n') || null,
           });
         });
         break;
       case 'shortAnswer':
         b.questions.forEach((q, i) => {
-          const prompt = [txt(q.prompt.html), q.textAfter ? txt(q.textAfter) : ''].filter(Boolean).join(' ');
-          const answer = q.preferred ?? q.answers[0] ?? null;
+          const answer = q.preferred ?? q.answers[0];
+          if (!answer) return;
           const others = q.answers.filter((a) => a !== answer);
           items.push({
             ...base,
+            kind: b.kind,
             key: `${b.id}:${i}`,
             questionIndex: i,
-            label: `${head} Q${i + 1}: ${clip(oneLine(prompt), 70)}`,
-            prompt,
-            bookAnswer: answer ? `${answer}${others.length ? ` (also accepted: ${others.join(', ')})` : ''}` : null,
+            bookAnswer: `${answer}${others.length ? ` (also accepted: ${others.join(', ')})` : ''}`,
             bookExplanation: txt(q.explanation.html) || null,
           });
         });
@@ -91,23 +78,11 @@ export function explainItems(section: Section): ExplainItem[] {
       case 'definitionMatch':
         items.push({
           ...base,
+          kind: b.kind,
           key: `${b.id}:0`,
           questionIndex: 0,
-          label: `${head}: ${clip(caption || 'Matching', 70)}`,
-          prompt: `Match each term to its definition.\nTerms: ${b.terms.map((t) => txt(t.term)).join('; ')}`,
           bookAnswer: b.terms.map((t) => `${txt(t.term)} → ${txt(t.definition)}`).join('\n'),
           bookExplanation: b.terms.map((t) => (t.explanation ? `${txt(t.term)}: ${txt(t.explanation)}` : '')).filter(Boolean).join('\n') || null,
-        });
-        break;
-      case 'challenge':
-        items.push({
-          ...base,
-          key: `${b.id}:0`,
-          questionIndex: 0,
-          label: `${head}: ${clip(caption || 'Challenge activity', 70)}`,
-          prompt: '',
-          bookAnswer: null,
-          bookExplanation: null,
         });
         break;
     }
