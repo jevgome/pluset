@@ -199,3 +199,27 @@ button:disabled { opacity: 0.5; cursor: default; }
 .zy-row > .zy-ch-text { margin: 0; }
 .zy-row > .zy-practice__slot { margin: 0; }
 .zy-row > .zy-ch-figure { flex-basis: 100%; }
+
+/* ---------- Library selection & sessions ---------- */
+
+.library__list li input[type='checkbox'], .library__book input { margin: 0 2px 0 4px; accent-color: var(--accent); }
+label.library__book { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.practice-start { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.practice-start select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+
+.zy-session { max-width: 820px; margin: 0 auto; }
+.zy-session__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.zy-session__header h2 { margin: 0; font-size: 1.3rem; }
+.zy-session__stats { display: flex; gap: 16px; color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.zy-session__bar { height: 6px; background: var(--surface-2); border-radius: 3px; margin: 12px 0 16px; overflow: hidden; }
+.zy-session__bar-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.2s ease; }
+.zy-session__source { color: var(--muted); font-size: 0.9rem; margin: 0 0 10px; }
+.zy-session__section { font-weight: 600; color: var(--text); }
+.zy-session__nav { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
+.zy-session__totals { display: flex; flex-wrap: wrap; gap: 24px; margin: 16px 0 24px; }
+.zy-stat { display: flex; flex-direction: column; }
+.zy-stat__value { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.zy-stat__label { color: var(--muted); font-size: 0.85rem; }
+.zy-session__table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 0.95rem; }
+.zy-session__table th, .zy-session__table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.zy-session__table td:last-child, .zy-session__table th:last-child { text-align: right; font-variant-numeric: tabular-nums; }

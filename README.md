@@ -10,7 +10,7 @@ except to zyBooks itself, and later to the AI provider you choose.
 
 - [x] Milestone 1: capture sections from zyBooks and view what was captured
 - [x] Milestone 2: new versions of challenge activities from the book's generator code
-- [ ] Milestone 3: practice page with answer checking
+- [x] Milestone 3: practice sessions across sections, with progress tracking
 - [ ] Milestone 4: AI-generated problems (Claude), with a book-only grounding check
 - [ ] Milestone 5: more AI providers, generated diagrams
 
@@ -46,6 +46,11 @@ Each challenge activity has a **Practice a new version** button. It runs the boo
 generator code (in Python, inside the browser via Pyodide) with fresh random values, checks
 your answers using the book's tolerances, and shows the worked solution once you've tried.
 The first problem takes a few seconds while Python loads.
+
+To practice several sections at once, tick them in the library, choose an order
+(weakest first, shuffled, or book order) and click **Practice**. A session deals one new
+version of every challenge level in those sections and ends with a summary. Results are
+saved locally per book, and "weakest first" uses them to bring back what you missed.
 
 ## Tests with real data
 

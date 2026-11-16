@@ -48,7 +48,7 @@ function challengeElement(el: ChallengeElement): HTMLElement | null {
   }
 }
 
-function renderChallenge(b: ChallengeBlock): HTMLElement {
+function renderChallenge(b: ChallengeBlock, section: Section): HTMLElement {
   const codeLines = [b.sharedCode, ...b.levels.map((l) => l.code)].join('\n').split('\n').filter((l) => l.trim()).length;
   const levels = b.levels.map((level) =>
     h(
@@ -65,11 +65,11 @@ function renderChallenge(b: ChallengeBlock): HTMLElement {
     ...levels,
     h('p', { class: 'zy-muted' }, `${PLACEHOLDER} = a value that is randomized each attempt.`),
     capturedNote([`generator code (${codeLines} lines)`, 'answer rules', 'solution templates']),
-    practicePanel(b),
+    practicePanel(b, { book: section.book, itemPrefix: `${section.chapter}.${section.section}:${b.id}` }),
   );
 }
 
-function renderBlock(b: Block): HTMLElement {
+function renderBlock(b: Block, section: Section): HTMLElement {
   switch (b.kind) {
     case 'text':
       return richEl(b.body, 'zy-text');
@@ -120,7 +120,7 @@ function renderBlock(b: Block): HTMLElement {
       );
     }
     case 'challenge':
-      return renderChallenge(b);
+      return renderChallenge(b, section);
     case 'unknown':
       return card('Unsupported content', b.caption, 'unknown', h('p', { class: 'zy-muted' }, `Type “${b.resourceType}”${b.tool ? `, tool “${b.tool}”` : ''}. This won’t be used for generation yet.`));
   }
@@ -148,7 +148,7 @@ export function renderSection(section: Section): HTMLElement {
       `${s.participation} participation activities · ${s.challenge} challenge activities · ${s.figures} images` +
         (s.unsupported ? ` · ${s.unsupported} unsupported` : ''),
     ),
-    ...section.blocks.map(renderBlock),
+    ...section.blocks.map((b) => renderBlock(b, section)),
   );
   typeset(root);
   return root;

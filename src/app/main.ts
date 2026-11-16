@@ -8,6 +8,9 @@ import { deleteSection, listSections, loadSectionRaw, saveSection, type SavedSec
 import { AuthError, fetchSectionRaw, NotFoundError } from '../zybooks/api';
 import { findZySession, type ZySession } from '../zybooks/session';
 import { h, renderSection } from './render';
+import { runSession } from './session';
+import type { SessionOrder } from '../core/progress';
+import type { Section } from '../core/model';
 
 const $ = <T extends HTMLElement>(id: string) => {
   const el = document.getElementById(id);
@@ -24,9 +27,13 @@ const fetchLog = $('fetch-log');
 const libraryEl = $('library');
 const importInput = $<HTMLInputElement>('import');
 const viewer = $('viewer');
+const orderSelect = $<HTMLSelectElement>('order');
+const startPracticeBtn = $<HTMLButtonElement>('start-practice');
 
 let session: ZySession | null = null;
 let openKey: string | null = null;
+/** Sections ticked for practice (metaKey). */
+const selected = new Set<string>();
 
 const metaKey = (m: Pick<SavedSectionMeta, 'book' | 'chapter' | 'section'>) => `${m.book}:${m.chapter}.${m.section}`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -159,9 +166,35 @@ async function refreshLibrary() {
   const byBook = new Map<string, SavedSectionMeta[]>();
   for (const m of items) byBook.set(m.book, [...(byBook.get(m.book) ?? []), m]);
 
+  // Forget selections for sections that were deleted.
+  const existing = new Set(items.map(metaKey));
+  for (const k of selected) if (!existing.has(k)) selected.delete(k);
+  updateStartButton();
+
   for (const [book, metas] of byBook) {
     const list = h('ul', { class: 'library__list' });
+    const all = h('input', { type: 'checkbox', 'aria-label': `Select all sections of ${book}` }) as HTMLInputElement;
+    const syncAll = () => {
+      const n = metas.filter((m) => selected.has(metaKey(m))).length;
+      all.checked = n === metas.length;
+      all.indeterminate = n > 0 && n < metas.length;
+    };
+    const boxes: HTMLInputElement[] = [];
+    all.addEventListener('change', () => {
+      for (const m of metas) (all.checked ? selected.add(metaKey(m)) : selected.delete(metaKey(m)));
+      for (const b of boxes) b.checked = all.checked;
+      updateStartButton();
+    });
     for (const m of metas) {
+      const box = h('input', { type: 'checkbox', 'aria-label': `Practice ${sectionLabel(m)}` }) as HTMLInputElement;
+      box.checked = selected.has(metaKey(m));
+      box.addEventListener('change', () => {
+        if (box.checked) selected.add(metaKey(m));
+        else selected.delete(metaKey(m));
+        syncAll();
+        updateStartButton();
+      });
+      boxes.push(box);
       const open = h('button', { type: 'button', class: 'library__open' }, h('span', { class: 'library__num' }, sectionLabel(m)), ` ${m.title}`);
       if (metaKey(m) === openKey) open.setAttribute('aria-current', 'true');
       open.addEventListener('click', () => void openSection(m));
@@ -171,9 +204,10 @@ async function refreshLibrary() {
         if (metaKey(m) === openKey) showEmpty();
         await refreshLibrary();
       });
-      list.append(h('li', {}, open, del));
+      list.append(h('li', {}, box, open, del));
     }
-    libraryEl.append(h('h3', { class: 'library__book' }, book), list);
+    syncAll();
+    libraryEl.append(h('label', { class: 'library__book' }, all, book), list);
   }
 }
 
@@ -198,6 +232,33 @@ async function openSection(m: SavedSectionMeta) {
   }
   await refreshLibrary();
 }
+
+/* ---------- Practice ---------- */
+
+function updateStartButton() {
+  startPracticeBtn.disabled = selected.size === 0;
+  startPracticeBtn.textContent = selected.size ? `Practice ${selected.size} section${selected.size === 1 ? '' : 's'}` : 'Practice selected';
+}
+
+startPracticeBtn.addEventListener('click', async () => {
+  const metas = (await listSections()).filter((m) => selected.has(metaKey(m)));
+  const sections: Section[] = [];
+  for (const m of metas) {
+    const raw = await loadSectionRaw(m);
+    try {
+      if (raw) sections.push(normalizeSectionResponse(raw, m.book));
+    } catch {
+      /* skip unreadable sections */
+    }
+  }
+  openKey = null;
+  await refreshLibrary();
+  viewer.scrollTop = 0;
+  await runSession(viewer, sections, orderSelect.value as SessionOrder, () => {
+    showEmpty();
+    void refreshLibrary();
+  });
+});
 
 /* ---------- Import ---------- */
 

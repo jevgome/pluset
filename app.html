@@ -32,8 +32,20 @@
         </section>
 
         <section class="panel panel--grow">
-          <h2>Library</h2>
+          <h2>3. Library &amp; practice</h2>
+          <p class="hint">Tick sections to practice, or click one to view it.</p>
           <div id="library" class="library"></div>
+          <div class="practice-start">
+            <label class="field">
+              <span>Order</span>
+              <select id="order">
+                <option value="weakest">Weakest first</option>
+                <option value="shuffle">Shuffled</option>
+                <option value="book">Book order</option>
+              </select>
+            </label>
+            <button id="start-practice" type="button" disabled>Practice selected</button>
+          </div>
           <label class="import">
             <input id="import" type="file" accept=".json,application/json" multiple hidden />
             <span class="link-button">Import a saved section response (.json)</span>
