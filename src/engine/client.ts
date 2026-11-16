@@ -2,18 +2,20 @@
 // Loading Python and running a problem's code are timed separately: loading can be
 // slow on some machines (it reads ~12 MB), but generator code should finish in moments.
 
-import type { LevelVars } from './runtime';
+import type { LevelVars, MatchRequest, MatchResult } from './runtime';
 import type { WorkerMessage, WorkerRequest } from './worker';
 
 const LOAD_TIMEOUT_MS = 180_000;
 const RUN_TIMEOUT_MS = 15_000;
+/** Matching runs the generator many times; zymatch.py stops itself at the request's budget. */
+const MATCH_TIMEOUT_MS = 60_000;
 
 type Progress = (stage: string) => void;
 
 let worker: Worker | null = null;
 let ready: Promise<void> | null = null;
 let nextId = 1;
-const pending = new Map<number, { resolve: (v: LevelVars) => void; reject: (e: Error) => void; timer: number }>();
+const pending = new Map<number, { resolve: (v: never) => void; reject: (e: Error) => void; timer: number }>();
 const progressListeners = new Set<Progress>();
 let lastStage = '';
 
@@ -71,8 +73,16 @@ function ensureReady(): Promise<void> {
           if (!p) return;
           pending.delete(m.id);
           clearTimeout(p.timer);
-          if (m.result.ok) p.resolve(m.result.vars);
+          if (m.result.ok) p.resolve(m.result.vars as never);
           else p.reject(new Error(m.result.error));
+          break;
+        }
+        case 'matched': {
+          const p = pending.get(m.id);
+          if (!p) return;
+          pending.delete(m.id);
+          clearTimeout(p.timer);
+          p.resolve(m.result as never);
           break;
         }
       }
@@ -111,6 +121,22 @@ export async function runLevel(sharedCode: string, levelCode: string, seed: numb
     );
     pending.set(id, { resolve, reject, timer });
     send(w, { type: 'run', id, sharedCode, levelCode, seed });
+  });
+}
+
+/** Searches for the random choices that reproduce the values a student's page shows. */
+export async function matchLevel(request: MatchRequest): Promise<MatchResult> {
+  await ensureReady();
+  const w = worker;
+  if (!w) throw new Error('The Python worker stopped unexpectedly.');
+  const id = nextId++;
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => resetWorker(new Error('Recreating your version took too long and was stopped.')),
+      MATCH_TIMEOUT_MS,
+    );
+    pending.set(id, { resolve, reject, timer });
+    send(w, { type: 'match', id, request });
   });
 }
 

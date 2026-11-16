@@ -33,6 +33,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         app: `${root}app.html`,
+        offscreen: `${root}offscreen.html`,
         background: `${root}src/background.ts`,
       },
       output: {

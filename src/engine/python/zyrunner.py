@@ -170,10 +170,8 @@ _SAFE_BUILTINS = {k: getattr(builtins, k) for k in dir(builtins) if k not in ("o
 _SAFE_BUILTINS["__import__"] = _safe_import
 
 
-def run(shared_code, level_code, seed):
-    """Returns JSON: {"ok": true, "vars": {...}} or {"ok": false, "error": "..."}."""
-    random.seed(seed)
-    scope = {
+def new_scope():
+    return {
         "__builtins__": _SAFE_BUILTINS,
         "__name__": "__zylevel__",
         "__zy_mod": __zy_mod,
@@ -182,11 +180,21 @@ def run(shared_code, level_code, seed):
         "random": random,
         "re": re,
     }
-    try:
-        exec(_compile(shared_code, "<shared code>"), scope)
-        exec(_compile(level_code, "<level code>"), scope)
-    except Exception as exc:  # report, don't crash the worker
-        return json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+
+
+def compile_level(shared_code, level_code):
+    return _compile(shared_code, "<shared code>"), _compile(level_code, "<level code>")
+
+
+def exec_level(compiled):
+    """Runs compiled (shared, level) code in a fresh scope and returns the scope."""
+    scope = new_scope()
+    exec(compiled[0], scope)
+    exec(compiled[1], scope)
+    return scope
+
+
+def export_vars(scope):
     out = {}
     for name, value in scope.items():
         if name.startswith("__"):
@@ -194,4 +202,14 @@ def run(shared_code, level_code, seed):
         exported = _export(value)
         if exported is not None:
             out[name] = exported
-    return json.dumps({"ok": True, "vars": out})
+    return out
+
+
+def run(shared_code, level_code, seed):
+    """Returns JSON: {"ok": true, "vars": {...}} or {"ok": false, "error": "..."}."""
+    random.seed(seed)
+    try:
+        scope = exec_level(compile_level(shared_code, level_code))
+    except Exception as exc:  # report, don't crash the worker
+        return json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+    return json.dumps({"ok": True, "vars": export_vars(scope)})

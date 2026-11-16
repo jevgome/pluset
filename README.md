@@ -90,9 +90,17 @@ its own **Show answer** button (definition-matching activities get one for the w
 activity). Clicking it reveals the book's answer and explanation for just that question.
 The section is captured into your library first if it isn't there yet.
 
-Challenge activities are randomized per student and have no fixed answer in the book, so
-they get no button. Nothing is typed into or submitted on the page. After reloading the
-extension, reload the zyBooks tab so the buttons reconnect.
+Challenge activities are randomized per student, so their **Show answer** button works
+differently: it reads the numbers your page shows, reruns the book's own generator code
+(Python, in the extension) with random choices steered until it produces exactly the
+problem on your page, and then shows that version's answers and the book's worked
+solution. It also lists the values it read ("Your values: x = 4, y = 1") so you can check
+them, and warns when the page doesn't pin your version down or only a close match was
+found. Click it again after moving to another level or starting a new attempt. The first
+time loads Python, which takes a few seconds.
+
+Nothing is typed into or submitted on the page. After reloading the extension, reload the
+zyBooks tab so the buttons reconnect.
 
 ## Tests with real data
 

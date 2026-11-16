@@ -1,7 +1,7 @@
 // Turns a captured section into the answers the on-page "Show answer" buttons
 // display: one entry per question of each participation activity, with the book's
-// own answer and explanation. Challenge activities are randomized per student and
-// the book has no fixed answer for them, so they get no entry.
+// own answer and explanation. Challenge activities are randomized per student, so
+// they are only listed here and solved from the page on request (service.ts).
 //
 // Pure (no DOM): runs in the service worker and in tests.
 
@@ -9,6 +9,7 @@ import type { Section } from '../core/model';
 import { sectionLabel } from '../core/model';
 import { expandZyMarkup, normalizeLatex } from '../core/zymarkup';
 import { htmlToText } from '../ai/text';
+import type { ChallengeRef } from './messages';
 
 export type ExplainKind = 'multipleChoice' | 'shortAnswer' | 'definitionMatch';
 
@@ -30,6 +31,20 @@ export interface ExplainItem {
 
 const txt = (html: string) => htmlToText(normalizeLatex(expandZyMarkup(html))).trim();
 const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+/** The section's challenge activities, numbered like the page. */
+export function challengeRefs(section: Section): ChallengeRef[] {
+  const out: ChallengeRef[] = [];
+  const label = sectionLabel(section);
+  let activityIndex = 0;
+  let challenge = 0;
+  for (const b of section.blocks) {
+    if (b.kind === 'text' || b.kind === 'container' || b.kind === 'unknown') continue;
+    const index = activityIndex++;
+    if (b.kind === 'challenge') out.push({ blockId: b.id, activityIndex: index, number: `${label}.${++challenge}` });
+  }
+  return out;
+}
 
 export function explainItems(section: Section): ExplainItem[] {
   const items: ExplainItem[] = [];

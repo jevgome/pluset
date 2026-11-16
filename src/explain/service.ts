@@ -1,14 +1,20 @@
 // Service-worker side of the on-page "Show answer" buttons: loads the section the
 // student has open (from the library, or captures it from zyBooks if it isn't there
-// yet) and lists the book's answers to its questions.
+// yet) and lists the book's answers to its questions. Challenge activities are solved
+// on request by recreating the student's randomized version from the page's text
+// (the Python search runs in an offscreen document, since service workers can't host it).
 
 import { normalizeSectionResponse } from '../core/normalize';
 import type { Section } from '../core/model';
 import { listSections, loadSectionRaw, saveSection } from '../core/storage';
 import { fetchSectionRaw } from '../zybooks/api';
 import { scanLocalStorageForTokens } from '../zybooks/session';
-import { explainItems } from './items';
-import type { ExplainRequest, ItemsResponse, SectionRef } from './messages';
+import { matchInput } from '../engine/match';
+import type { MatchResult } from '../engine/runtime';
+import type { OffscreenMatchRequest } from '../offscreen/main';
+import { challengeRefs, explainItems } from './items';
+import type { ExplainRequest, ItemsResponse, SectionRef, SolveResponse } from './messages';
+import { solvedLevels } from './solve';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -39,15 +45,58 @@ async function loadSection(ref: SectionRef, tabId: number | undefined, refresh: 
   return { section, fetchedAt };
 }
 
-async function items(req: ExplainRequest, tabId: number | undefined): Promise<ItemsResponse> {
+async function items(req: Extract<ExplainRequest, { type: 'pluset:explain:items' }>, tabId: number | undefined): Promise<ItemsResponse> {
   const { section, fetchedAt } = await loadSection(req, tabId, req.refresh === true);
-  return { ok: true, title: section.title, items: explainItems(section), fetchedAt };
+  return { ok: true, title: section.title, items: explainItems(section), challenges: challengeRefs(section), fetchedAt };
+}
+
+let offscreen: Promise<void> | null = null;
+
+function ensureOffscreen(): Promise<void> {
+  offscreen ??= (async () => {
+    if (await chrome.offscreen.hasDocument()) return;
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [chrome.offscreen.Reason.WORKERS],
+      justification: 'Runs the book’s Python code for challenge activities in a worker.',
+    });
+  })().catch((e: unknown) => {
+    offscreen = null;
+    throw e;
+  });
+  return offscreen;
+}
+
+/** The service worker can be stopped while it waits on a long request; API calls keep it alive. */
+function keepAlive(): () => void {
+  const timer = setInterval(() => void chrome.runtime.getPlatformInfo(), 20_000);
+  return () => clearInterval(timer);
+}
+
+async function solve(req: Extract<ExplainRequest, { type: 'pluset:explain:solve' }>, tabId: number | undefined): Promise<SolveResponse> {
+  const { section } = await loadSection(req, tabId, false);
+  const block = section.blocks.find((b) => b.id === req.blockId);
+  if (block?.kind !== 'challenge') return { ok: false, error: 'That activity isn’t in the captured section. Recapture it in the Pluset app.' };
+  const pageText = req.pageText.slice(0, 30_000);
+  const requests = block.levels.map((_, i) => matchInput(block, i, pageText));
+  const stop = keepAlive();
+  try {
+    await ensureOffscreen();
+    const msg: OffscreenMatchRequest = { type: 'pluset:offscreen:match', requests };
+    const results = (await chrome.runtime.sendMessage(msg)) as MatchResult[] | undefined;
+    if (!results) throw new Error('The Python engine didn’t answer.');
+    return solvedLevels(block, requests, results);
+  } finally {
+    stop();
+  }
 }
 
 export function registerExplainService(): void {
   chrome.runtime.onMessage.addListener((req: ExplainRequest, sender, sendResponse) => {
-    if (req?.type !== 'pluset:explain:items') return false;
-    items(req, sender.tab?.id).then(sendResponse, (e) => sendResponse({ ok: false, error: message(e) }));
+    if (req?.type !== 'pluset:explain:items' && req?.type !== 'pluset:explain:solve') return false;
+    const tabId = sender.tab?.id;
+    const run = req.type === 'pluset:explain:items' ? items(req, tabId) : solve(req, tabId);
+    run.then(sendResponse, (e) => sendResponse({ ok: false, error: message(e) }));
     return true; // respond asynchronously
   });
 }

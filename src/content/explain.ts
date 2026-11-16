@@ -1,13 +1,15 @@
 // "Show answer" buttons on zyBooks pages: each question of a participation activity
 // gets its own button that reveals the book's answer and explanation for just that
-// question. Nothing is typed into or submitted on the page.
+// question. Challenge activities are randomized per student, so their button reads the
+// values the page shows and recreates that version from the book's generator code
+// (service worker + offscreen Python). Nothing is typed into or submitted on the page.
 //
 // Built separately as one classic script (vite.content.config.ts): content scripts
 // can't load ES module chunks, so this file imports only types and katex.
 
 import katex from 'katex';
 import type { ExplainItem } from '../explain/items';
-import type { ExplainRequest, ItemsResponse, SectionRef } from '../explain/messages';
+import type { ChallengeRef, ExplainRequest, ItemsResponse, SectionRef, SolveResponse, SolvedLevel } from '../explain/messages';
 
 // ---------- page helpers ----------
 
@@ -50,6 +52,73 @@ function itemsFor(el: HTMLElement, index: number, items: ExplainItem[]): Explain
   const info = activityInfo(el);
   if (info.kind === 'challenge') return [];
   return items.filter((i) => (info.number ? i.number === info.number : i.activityIndex === index));
+}
+
+function challengeFor(el: HTMLElement, index: number, challenges: ChallengeRef[]): ChallengeRef | null {
+  const info = activityInfo(el);
+  if (info.kind === 'participation') return null;
+  return challenges.find((c) => (info.number ? c.number === info.number : c.activityIndex === index)) ?? null;
+}
+
+const MATH_CONTAINERS = 'mjx-container, .MathJax, .MathJax_Display, .MathJax_SVG, .MathJax_CHTML, .katex, math';
+
+/** One readable form of a rendered formula: its TeX source if the page kept it, else its MathML leaves. */
+function mathSource(el: Element): string {
+  const tex =
+    el.querySelector('annotation[encoding*="tex" i]')?.textContent ??
+    (el.nextElementSibling?.matches('script[type^="math/tex"]') ? el.nextElementSibling.textContent : null);
+  if (tex) return tex;
+  const math = el.matches('math') ? el : el.querySelector('math');
+  if (math) {
+    const leaves = [...math.querySelectorAll('mi, mn, mo, mtext, ms')].map((l) => l.textContent ?? '');
+    if (leaves.length) return leaves.join(' ');
+  }
+  return el.getAttribute('aria-label') ?? el.textContent ?? '';
+}
+
+/**
+ * The text of an activity as the student sees it, with each formula included once
+ * (pages keep several copies: rendered glyphs, MathML for screen readers, TeX source).
+ * Typed answers aren't included; answer boxes contribute their labels.
+ */
+function pageTextOf(root: Element): string {
+  const out: string[] = [];
+  const done = new Set<Element>();
+  const walk = (n: Node) => {
+    if (n.nodeType === Node.TEXT_NODE) {
+      out.push(n.textContent ?? '');
+      return;
+    }
+    if (!(n instanceof Element) || done.has(n)) return;
+    if (n.classList.contains(HOST_CLASS) || n.matches('style, noscript, .MathJax_Preview, mjx-assistive-mml, .MJX_Assistive_MathML')) return;
+    if (n.matches('script')) {
+      if (n.matches('script[type^="math/tex"]')) out.push(` ${n.textContent ?? ''} `);
+      return;
+    }
+    if (n.matches(MATH_CONTAINERS)) {
+      out.push(` ${mathSource(n)} `);
+      const script = n.nextElementSibling;
+      if (script?.matches('script[type^="math/tex"]')) done.add(script);
+      return;
+    }
+    if (n.matches('input, select, textarea')) {
+      const label = n.getAttribute('aria-label');
+      if (label) out.push(` ${label} `);
+      return;
+    }
+    if (n instanceof HTMLIFrameElement) {
+      try {
+        if (n.contentDocument?.body) walk(n.contentDocument.body);
+      } catch {
+        /* cross-origin frame */
+      }
+      return;
+    }
+    for (const c of n.childNodes) walk(c);
+    out.push(' ');
+  };
+  walk(root);
+  return out.join('').replace(/[ \t]+/g, ' ');
 }
 
 function questionElements(activity: HTMLElement): HTMLElement[] {
@@ -96,12 +165,22 @@ const CSS = `
 .why { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .error { color: #c92a2a; font-size: 13px; white-space: pre-wrap; }
 .math--display { display: block; margin: 4px 0; overflow-x: auto; }
+.muted { color: #6c757d; font-size: 13px; }
+.warn { color: #9c6500; font-size: 13px; margin-top: 4px; }
+.level + .level { margin-top: 10px; padding-top: 8px; border-top: 1px solid #b2f2bb; }
+.level__name { font-weight: 700; }
+.row { margin-top: 4px; }
+.row__label { color: #495057; font-size: 13px; }
+details { margin-top: 6px; }
+summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 @media (prefers-color-scheme: dark) {
   :host { color: #e9ecef; }
   .btn { background: transparent; color: #91a7ff; border-color: #91a7ff; }
   .btn:hover { background: #25262b; }
   .card { background: #1b3326; border-color: #2b8a3e; }
-  .title { color: #adb5bd; }
+  .title, .muted, .row__label { color: #adb5bd; }
+  .warn { color: #ffc078; }
+  .level + .level { border-color: #2b8a3e; }
 }
 `;
 
@@ -140,12 +219,76 @@ function answerWidget(item: ExplainItem, label: string): HTMLElement {
   return host;
 }
 
+function solvedLevel(level: SolvedLevel, showName: boolean): HTMLElement {
+  const box = el('div', 'level');
+  if (showName) box.append(el('div', 'level__name', level.name));
+  if (level.ambiguous) box.append(el('div', 'warn', 'The page doesn’t show enough to pin down your version; other versions with different answers fit it too. Check the values below.'));
+  else if (!level.exact) box.append(el('div', 'warn', 'Closest match to your page, not an exact one. Check the values below.'));
+  if (level.shown.length) box.append(el('div', 'muted', `Your values: ${level.shown.map(([k, v]) => `${k} = ${v}`).join(', ')}`));
+  for (const a of level.answers) {
+    box.append(el('div', 'row', el('div', 'row__label', a.label), el('div', 'answer', mathText(a.value))));
+  }
+  if (level.solution) {
+    const d = el('details', '', el('summary', '', 'Book’s solution'), el('div', 'why', mathText(level.solution)));
+    box.append(d);
+  }
+  return box;
+}
+
+function challengeWidget(ref: ChallengeRef, activity: HTMLElement, section: () => SectionRef | null): HTMLElement {
+  const { host, root } = shadowHost(`challenge:${ref.blockId}`);
+  const btn = el('button', 'btn', 'Show answer');
+  btn.type = 'button';
+  const card = el('div', 'card');
+  card.hidden = true;
+  let seq = 0;
+  btn.addEventListener('click', async () => {
+    if (!card.hidden) {
+      card.hidden = true;
+      btn.textContent = 'Show answer';
+      return;
+    }
+    const s = section();
+    if (!s) return;
+    const mine = ++seq;
+    card.hidden = false;
+    btn.textContent = 'Hide answer';
+    card.replaceChildren(el('div', 'muted', 'Recreating your version from the numbers on the page… (the first time loads Python, which can take a little while)'));
+    // Read the page now: values change when zyBooks moves to another level or a new attempt.
+    const pageText = pageTextOf(activity);
+    console.debug('[Pluset] challenge page text', ref.number, pageText);
+    let res: SolveResponse;
+    try {
+      res = await send<SolveResponse>({ type: 'pluset:explain:solve', ...s, blockId: ref.blockId, pageText });
+    } catch (e) {
+      res = { ok: false, error: `${e instanceof Error ? e.message : e}\nIf you just reloaded the extension, reload this page.` };
+    }
+    if (mine !== seq) return;
+    if (!res.ok) {
+      card.replaceChildren(el('div', 'error', res.error));
+      return;
+    }
+    card.replaceChildren(
+      el('div', 'title', 'Answer for your version'),
+      ...res.levels.map((l) => solvedLevel(l, res.levels.length > 1)),
+      el('div', 'muted', 'Click again after moving to another level or starting a new attempt; the values change.'),
+    );
+  });
+  root.append(btn, card);
+  return host;
+}
+
 const hasWidget = (parent: HTMLElement, key: string) =>
   [...parent.children].some((c) => c instanceof HTMLElement && c.classList.contains(HOST_CLASS) && c.dataset.plusetKey === key);
 
-/** Adds a button under each question that has a book answer (and isn't already done). */
-function inject(items: ExplainItem[]) {
+/** Adds a button under each question that has a book answer, and one per challenge activity (if not already there). */
+function inject(items: ExplainItem[], challenges: ChallengeRef[], section: () => SectionRef | null) {
   activityElements().forEach((activity, index) => {
+    const ch = challengeFor(activity, index, challenges);
+    if (ch) {
+      if (!hasWidget(activity, `challenge:${ch.blockId}`)) activity.append(challengeWidget(ch, activity, section));
+      return;
+    }
     const mine = itemsFor(activity, index, items);
     if (!mine.length) return;
     const questions = questionElements(activity);
@@ -181,11 +324,16 @@ const send = <T,>(req: ExplainRequest) => chrome.runtime.sendMessage(req) as Pro
 
 function start() {
   let items: ExplainItem[] = [];
+  let challenges: ChallengeRef[] = [];
+  let loaded = false;
   let loadSeq = 0;
+  const section = () => sectionFromUrl(location.href);
 
   async function load() {
     const seq = ++loadSeq;
     items = [];
+    challenges = [];
+    loaded = false;
     document.querySelectorAll(`.${HOST_CLASS}`).forEach((h) => h.remove());
     const ref = sectionFromUrl(location.href);
     if (!ref) return;
@@ -198,16 +346,18 @@ function start() {
     if (seq !== loadSeq) return;
     if (!res.ok) return showError(res.error, () => void load());
     items = res.items;
-    inject(items);
+    challenges = res.challenges;
+    loaded = true;
+    inject(items, challenges, section);
   }
 
   // zyBooks renders activities lazily and re-renders them; add buttons to whatever appears.
   let pending = 0;
   new MutationObserver(() => {
-    if (!items.length || pending) return;
+    if (!loaded || pending) return;
     pending = window.setTimeout(() => {
       pending = 0;
-      inject(items);
+      inject(items, challenges, section);
     }, 300);
   }).observe(document.body, { childList: true, subtree: true });
 

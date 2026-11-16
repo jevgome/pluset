@@ -2,17 +2,19 @@
 // the page responsive, and lets the client kill runaway code by terminating us.
 
 import { loadPyodide } from 'pyodide';
-import { createLevelRunner, type LevelRunner, type RunResult } from './runtime';
+import { createLevelRunner, type LevelRunner, type MatchRequest, type MatchResult, type RunResult } from './runtime';
 
 export type WorkerRequest =
   | { type: 'init' }
-  | { type: 'run'; id: number; sharedCode: string; levelCode: string; seed: number };
+  | { type: 'run'; id: number; sharedCode: string; levelCode: string; seed: number }
+  | { type: 'match'; id: number; request: MatchRequest };
 
 export type WorkerMessage =
   | { type: 'progress'; stage: string }
   | { type: 'ready'; ms: number }
   | { type: 'initError'; error: string }
-  | { type: 'result'; id: number; result: RunResult };
+  | { type: 'result'; id: number; result: RunResult }
+  | { type: 'matched'; id: number; result: MatchResult };
 
 const post = (m: WorkerMessage) => self.postMessage(m);
 
@@ -46,11 +48,22 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     await getRunner().catch(() => {});
     return;
   }
+  const error = (e: unknown) => ({ ok: false as const, error: e instanceof Error ? e.message : String(e) });
+  if (msg.type === 'match') {
+    let result: MatchResult;
+    try {
+      result = (await getRunner()).match(msg.request);
+    } catch (e) {
+      result = error(e);
+    }
+    post({ type: 'matched', id: msg.id, result });
+    return;
+  }
   let result: RunResult;
   try {
     result = (await getRunner()).run(msg.sharedCode, msg.levelCode, msg.seed);
   } catch (e) {
-    result = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    result = error(e);
   }
   post({ type: 'result', id: msg.id, result });
 };
