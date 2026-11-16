@@ -140,14 +140,14 @@ export function createProblemView(
   solutionBtn.addEventListener('click', showSolution);
 
   async function generate(): Promise<boolean> {
-    setStatus('Generating… (the first one takes a few seconds while Python loads)');
+    setStatus('Generating…');
     const level = block.levels[levelIndex];
     if (!level) {
       setStatus('This level no longer exists.', 'error');
       return false;
     }
     try {
-      const vars = await runLevel(block.sharedCode, level.code, randomSeed());
+      const vars = await runLevel(block.sharedCode, level.code, randomSeed(), (stage) => setStatus(stage));
       instance = instantiateLevel(block, levelIndex, vars);
     } catch (e) {
       setStatus(`Couldn't generate this problem: ${e instanceof Error ? e.message : String(e)}`, 'error');

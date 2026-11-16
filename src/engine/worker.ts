@@ -4,35 +4,53 @@
 import { loadPyodide } from 'pyodide';
 import { createLevelRunner, type LevelRunner, type RunResult } from './runtime';
 
-export interface RunRequest {
-  id: number;
-  sharedCode: string;
-  levelCode: string;
-  seed: number;
-}
+export type WorkerRequest =
+  | { type: 'init' }
+  | { type: 'run'; id: number; sharedCode: string; levelCode: string; seed: number };
 
-export interface RunResponse {
-  id: number;
-  result: RunResult;
-}
+export type WorkerMessage =
+  | { type: 'progress'; stage: string }
+  | { type: 'ready'; ms: number }
+  | { type: 'initError'; error: string }
+  | { type: 'result'; id: number; result: RunResult };
+
+const post = (m: WorkerMessage) => self.postMessage(m);
 
 let runner: Promise<LevelRunner> | null = null;
 
 function getRunner(): Promise<LevelRunner> {
-  runner ??= loadPyodide({
-    // The Pyodide runtime files are copied to /pyodide/ at build time.
-    indexURL: new URL('/pyodide/', self.location.href).href,
-  }).then(createLevelRunner);
+  if (runner) return runner;
+  const started = performance.now();
+  // The Pyodide runtime files are copied to /pyodide/ at build time.
+  const indexURL = new URL('/pyodide/', self.location.href).href;
+  post({ type: 'progress', stage: 'Loading Python (about 12 MB, first time only)…' });
+  runner = loadPyodide({ indexURL })
+    .then((py) => {
+      post({ type: 'progress', stage: 'Starting Python…' });
+      const r = createLevelRunner(py);
+      post({ type: 'ready', ms: Math.round(performance.now() - started) });
+      return r;
+    })
+    .catch((e: unknown) => {
+      runner = null; // allow a retry
+      const error = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      post({ type: 'initError', error });
+      throw e;
+    });
   return runner;
 }
 
-self.onmessage = async (event: MessageEvent<RunRequest>) => {
-  const { id, sharedCode, levelCode, seed } = event.data;
+self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
+  const msg = event.data;
+  if (msg.type === 'init') {
+    await getRunner().catch(() => {});
+    return;
+  }
   let result: RunResult;
   try {
-    result = (await getRunner()).run(sharedCode, levelCode, seed);
+    result = (await getRunner()).run(msg.sharedCode, msg.levelCode, msg.seed);
   } catch (e) {
     result = { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
-  self.postMessage({ id, result } satisfies RunResponse);
+  post({ type: 'result', id: msg.id, result });
 };
