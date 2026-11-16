@@ -6,7 +6,7 @@
   "description": "Browser extension that turns zyBooks sections into extra practice problems.",
   "scripts": {
     "prebuild": "node scripts/check-node.cjs",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && vite build -c vite.content.config.ts",
     "watch": "vite build --watch",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/check-node.cjs",

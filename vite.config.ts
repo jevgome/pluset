@@ -28,6 +28,8 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'chrome120',
+    // Preload links need a DOM, which the service worker doesn't have; local files load fast anyway.
+    modulePreload: false,
     rollupOptions: {
       input: {
         app: `${root}app.html`,

@@ -24,7 +24,7 @@ export function bookFromUrl(url: string | undefined): string | null {
 }
 
 // Runs inside the zyBooks page. Must be self-contained (it is serialized by chrome.scripting).
-function scanLocalStorageForTokens(): { path: string; value: string }[] {
+export function scanLocalStorageForTokens(): { path: string; value: string }[] {
   const found: { path: string; value: string }[] = [];
   const visit = (v: unknown, path: string, depth: number) => {
     if (depth > 6 || v === null || v === undefined) return;
