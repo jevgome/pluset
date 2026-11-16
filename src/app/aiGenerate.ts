@@ -45,6 +45,9 @@ export async function runGeneration(panel: HTMLElement, sections: Section[], cou
   } catch (e) {
     return fail(`${e instanceof Error ? e.message : String(e)} (AI settings are at the bottom of the sidebar.)`);
   }
+  if (settings.provider === 'claude-code') {
+    step('Using Claude Code through the Pluset helper. Each request can take a minute or two.');
+  }
 
   const controller = new AbortController();
   cancel.addEventListener('click', () => controller.abort());
@@ -74,7 +77,8 @@ export async function runGeneration(panel: HTMLElement, sections: Section[], cou
 
   const u = res.usage;
   const tokens = `${fmtTokens(u.generator.inputTokens + u.generator.cacheReadTokens + u.generator.cacheWriteTokens + u.reviewer.inputTokens + u.reviewer.cacheReadTokens + u.reviewer.cacheWriteTokens)} in, ${fmtTokens(u.generator.outputTokens + u.reviewer.outputTokens)} out`;
-  const cost = res.cost === null ? '' : ` · about $${res.cost.toFixed(2)}`;
+  const cost =
+    settings.provider === 'claude-code' ? ' · counted toward your Claude plan’s usage' : res.cost === null ? '' : ` · about $${res.cost.toFixed(2)}`;
   const rejected = res.rejected.length
     ? h(
         'details',

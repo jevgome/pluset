@@ -54,8 +54,18 @@ saved locally per book, and "weakest first" uses them to bring back what you mis
 
 ## AI-generated problems
 
-Open **AI settings** at the bottom of the sidebar, choose a provider (Claude for now) and
-paste your API key. The key is stored only in this browser and sent only to that provider.
+Open **AI settings** at the bottom of the sidebar and choose a provider:
+
+- **Claude Code (your Claude plan)** — no API key. Uses your Claude subscription through
+  Claude Code on this computer:
+  1. In the project folder run `npm run helper` and keep that terminal open.
+  2. Copy the token it prints into **Helper token** and click **Test connection**.
+
+  The helper listens only on this computer, accepts only requests with the token, refuses
+  requests from web pages, and runs Claude Code with no tools (it can only return text).
+  Usage counts toward your plan's limits. Figures are described in text, not sent as images.
+- **Claude API (API key)** — pay-as-you-go API access, billed separately from subscriptions.
+  The key is stored only in this browser and sent only to Anthropic.
 
 Then either open a section and use **Generate with AI** at the end of it, or tick several
 sections in the library and click **Generate AI problems**. Each run:

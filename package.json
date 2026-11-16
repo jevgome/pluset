@@ -10,7 +10,8 @@
     "watch": "vite build --watch",
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/check-node.cjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "helper": "node helper/server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

@@ -33,8 +33,8 @@ export interface JsonResponse {
 export interface ModelInfo {
   id: string;
   label: string;
-  /** USD per million tokens. */
-  price: { input: number; output: number; cacheRead: number; cacheWrite: number };
+  /** USD per million tokens, or null when usage isn't billed per token (e.g. a subscription). */
+  price: { input: number; output: number; cacheRead: number; cacheWrite: number } | null;
   vision: boolean;
 }
 
@@ -70,8 +70,8 @@ export function addUsage(a: Usage, b: Usage): Usage {
 
 /** Estimated cost in USD of `usage` on `model`. */
 export function costOf(usage: Usage, model: ModelInfo | undefined): number | null {
-  if (!model) return null;
-  const p = model.price;
+  const p = model?.price;
+  if (!p) return null;
   return (
     (usage.inputTokens * p.input + usage.outputTokens * p.output + usage.cacheReadTokens * p.cacheRead + usage.cacheWriteTokens * p.cacheWrite) /
     1_000_000

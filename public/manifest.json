@@ -19,7 +19,9 @@
     "https://learn.zybooks.com/*",
     "https://zyserver.zybooks.com/*",
     "https://zytools.zybooks.com/*",
-    "https://api.anthropic.com/*"
+    "https://api.anthropic.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
