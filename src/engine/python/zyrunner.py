@@ -152,10 +152,29 @@ def _export(value):
     return None
 
 
+# Problem code (the book's, or AI-written) never needs to reach the browser. Pyodide
+# exposes JavaScript through these modules, so block them for the code we exec.
+# This only affects `import` statements in that code; library modules it imports
+# (unittest, decimal, ...) keep their normal imports.
+_BLOCKED_IMPORTS = {"js", "pyodide", "pyodide_js", "_pyodide", "micropip", "sys", "importlib", "ctypes", "gc", "inspect", "builtins", "os", "subprocess", "socket"}
+_real_import = builtins.__import__
+
+
+def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if name.split(".")[0] in _BLOCKED_IMPORTS:
+        raise ImportError(f"import of '{name}' is not allowed in problem code")
+    return _real_import(name, globals, locals, fromlist, level)
+
+
+_SAFE_BUILTINS = {k: getattr(builtins, k) for k in dir(builtins) if k not in ("open", "breakpoint", "input", "exit", "quit", "help")}
+_SAFE_BUILTINS["__import__"] = _safe_import
+
+
 def run(shared_code, level_code, seed):
     """Returns JSON: {"ok": true, "vars": {...}} or {"ok": false, "error": "..."}."""
     random.seed(seed)
     scope = {
+        "__builtins__": _SAFE_BUILTINS,
         "__name__": "__zylevel__",
         "__zy_mod": __zy_mod,
         "__zy_cmp": __zy_cmp,

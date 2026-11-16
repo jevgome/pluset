@@ -4,7 +4,7 @@
 import type { ChallengeBlock } from '../core/model';
 import { recordOutcome } from '../core/progress';
 import { h } from './dom';
-import { createProblemView, type ProblemView } from './problemView';
+import { challengeSource, createProblemView, type ProblemView } from './problemView';
 
 export interface PracticeContext {
   book: string;
@@ -46,7 +46,7 @@ export function practicePanel(block: ChallengeBlock, ctx: PracticeContext): HTML
     levelIndex = index;
     renderTabs();
     nextBtn.hidden = true;
-    view = createProblemView(block, index, {
+    view = createProblemView(challengeSource(block, index), {
       onChange: (o) => {
         nextBtn.hidden = !(o.solved && levelIndex + 1 < block.levels.length);
       },

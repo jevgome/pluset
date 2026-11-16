@@ -77,12 +77,15 @@ export function expandZyMarkup(text: string): string {
         continue;
       }
     }
-    if (text.startsWith('[image](', i)) {
-      const idEnd = matchBracket(text, i + 7, '(', ')');
+    // [image](id)(alt) or [image W H](id)(alt)
+    const imageHead = text.startsWith('[image', i) ? /^\[image(?: \d+ \d+)?\]\(/.exec(text.slice(i, i + 24)) : null;
+    if (imageHead) {
+      const open = i + imageHead[0].length - 1;
+      const idEnd = matchBracket(text, open, '(', ')');
       if (idEnd !== -1 && text[idEnd + 1] === '(') {
         const altEnd = matchBracket(text, idEnd + 1, '(', ')');
         if (altEnd !== -1) {
-          out += imageHtml(text.slice(i + 8, idEnd).trim(), text.slice(idEnd + 2, altEnd).trim());
+          out += imageHtml(text.slice(open + 1, idEnd).trim(), text.slice(idEnd + 2, altEnd).trim());
           i = altEnd + 1;
           continue;
         }

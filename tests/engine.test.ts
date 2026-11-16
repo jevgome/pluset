@@ -129,6 +129,18 @@ ranged = pick_from_range(3, 3)
     expect(bad).toEqual({ ok: false, error: 'ZeroDivisionError: division by zero' });
   });
 
+  it('blocks imports that reach the browser or the interpreter', () => {
+    for (const mod of ['js', 'pyodide', 'sys', 'importlib', 'os']) {
+      const r = runner.run('', `import ${mod}`, 1);
+      expect(r).toEqual({ ok: false, error: `ImportError: import of '${mod}' is not allowed in problem code` });
+    }
+    expect(runner.run('', 'from js import fetch', 1).ok).toBe(false);
+    expect(runner.run('', "x = __import__('js')", 1).ok).toBe(false);
+    expect(runner.run('', "open('/etc/passwd')", 1).ok).toBe(false);
+    // Ordinary modules still work, including ones that import blocked modules internally.
+    expect(runner.run('', 'import math, random, re, decimal, unittest\nfrom fractions import Fraction\nx = Fraction(1, 3)', 1).ok).toBe(true);
+  });
+
   it('unescapes HTML-escaped code', () => {
     expect(evalVars('ok = 1 &lt; 2 and 3 &gt; 2\ns = r"a &amp; b"').ok).toBe('True');
     expect(evalVars('s = r"a &amp; b"').s).toBe('a & b');

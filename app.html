@@ -44,13 +44,27 @@
                 <option value="book">Book order</option>
               </select>
             </label>
+            <label class="check"><input id="include-ai" type="checkbox" checked /><span>Include AI-generated problems</span></label>
             <button id="start-practice" type="button" disabled>Practice selected</button>
+            <div class="gen-start">
+              <select id="gen-count" aria-label="Number of AI problems to generate">
+                <option value="3">3</option>
+                <option value="5" selected>5</option>
+                <option value="8">8</option>
+              </select>
+              <button id="generate-ai" type="button" class="secondary" disabled>Generate AI problems</button>
+            </div>
           </div>
           <label class="import">
             <input id="import" type="file" accept=".json,application/json" multiple hidden />
             <span class="link-button">Import a saved section response (.json)</span>
           </label>
         </section>
+
+        <details class="panel">
+          <summary><h2>AI settings</h2></summary>
+          <div id="ai-settings" class="ai-settings"></div>
+        </details>
       </aside>
 
       <main id="viewer" class="viewer">

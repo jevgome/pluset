@@ -9,6 +9,8 @@ export type ProblemPart = (
   | { kind: 'text'; html: string }
   | { kind: 'input'; id: string; label: string; placeholder: string | null; answer: AnswerSpec }
   | { kind: 'dropdown'; id: string; label: string; options: string[]; answer: AnswerSpec }
+  /** Multiple choice: option HTML, the correct option's index (as a string), and per-option explanations. */
+  | { kind: 'choices'; id: string; options: string[]; explanations: string[]; answer: AnswerSpec }
   | { kind: 'image'; image: ImageRef }
   | { kind: 'unsupported'; type: string }
 ) & {

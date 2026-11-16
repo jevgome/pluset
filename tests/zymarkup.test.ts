@@ -23,6 +23,11 @@ describe('expandZyMarkup', () => {
     );
   });
 
+  it('accepts image markup with dimensions', () => {
+    expect(expandZyMarkup('[image 175 93](id9)(A contraction)')).toContain('data-zy-image="id9"');
+    expect(expandZyMarkup('[image 175 93](id9)(A contraction)')).toContain('<figcaption>A contraction</figcaption>');
+  });
+
   it('leaves ordinary text and unterminated markup alone', () => {
     expect(expandZyMarkup('a [b] \\(c[d]\\) [table][oops')).toBe('a [b] \\(c[d]\\) [table][oops');
   });

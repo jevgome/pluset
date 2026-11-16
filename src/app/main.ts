@@ -9,6 +9,10 @@ import { AuthError, fetchSectionRaw, NotFoundError } from '../zybooks/api';
 import { findZySession, type ZySession } from '../zybooks/session';
 import { h, renderSection } from './render';
 import { runSession } from './session';
+import { mountAiSettings } from './aiSettingsPanel';
+import { aiSectionPanel } from './aiSectionPanel';
+import { runGeneration } from './aiGenerate';
+import { listAiProblems } from '../ai/store';
 import type { SessionOrder } from '../core/progress';
 import type { Section } from '../core/model';
 
@@ -29,6 +33,9 @@ const importInput = $<HTMLInputElement>('import');
 const viewer = $('viewer');
 const orderSelect = $<HTMLSelectElement>('order');
 const startPracticeBtn = $<HTMLButtonElement>('start-practice');
+const includeAiBox = $<HTMLInputElement>('include-ai');
+const generateAiBtn = $<HTMLButtonElement>('generate-ai');
+const genCountSelect = $<HTMLSelectElement>('gen-count');
 
 let session: ZySession | null = null;
 let openKey: string | null = null;
@@ -225,7 +232,7 @@ async function openSection(m: SavedSectionMeta) {
   try {
     const section = normalizeSectionResponse(raw, m.book);
     openKey = metaKey(m);
-    viewer.replaceChildren(renderSection(section));
+    viewer.replaceChildren(renderSection(section), aiSectionPanel(section));
     viewer.scrollTop = 0;
   } catch (e) {
     viewer.replaceChildren(h('p', { class: 'status', 'data-tone': 'error' }, `Couldn't read this section: ${errorMessage(e)}`));
@@ -237,10 +244,12 @@ async function openSection(m: SavedSectionMeta) {
 
 function updateStartButton() {
   startPracticeBtn.disabled = selected.size === 0;
+  generateAiBtn.disabled = selected.size === 0;
+  generateAiBtn.textContent = selected.size ? `Generate AI problems for ${selected.size}` : 'Generate AI problems';
   startPracticeBtn.textContent = selected.size ? `Practice ${selected.size} section${selected.size === 1 ? '' : 's'}` : 'Practice selected';
 }
 
-startPracticeBtn.addEventListener('click', async () => {
+async function selectedSections(): Promise<Section[]> {
   const metas = (await listSections()).filter((m) => selected.has(metaKey(m)));
   const sections: Section[] = [];
   for (const m of metas) {
@@ -251,13 +260,48 @@ startPracticeBtn.addEventListener('click', async () => {
       /* skip unreadable sections */
     }
   }
+  return sections;
+}
+
+startPracticeBtn.addEventListener('click', async () => {
+  const sections = await selectedSections();
+  const ai = includeAiBox.checked
+    ? (await Promise.all([...new Set(sections.map((s) => s.book))].map((b) => listAiProblems(b)))).flat()
+    : [];
   openKey = null;
   await refreshLibrary();
   viewer.scrollTop = 0;
-  await runSession(viewer, sections, orderSelect.value as SessionOrder, () => {
-    showEmpty();
-    void refreshLibrary();
-  });
+  await runSession(
+    viewer,
+    sections,
+    orderSelect.value as SessionOrder,
+    () => {
+      showEmpty();
+      void refreshLibrary();
+void mountAiSettings($('ai-settings'));
+    },
+    ai,
+  );
+});
+
+generateAiBtn.addEventListener('click', async () => {
+  const sections = await selectedSections();
+  const books = new Set(sections.map((s) => s.book));
+  if (books.size > 1) {
+    viewer.replaceChildren(h('p', { class: 'status', 'data-tone': 'error' }, 'Select sections from one book at a time to generate problems.'));
+    return;
+  }
+  openKey = null;
+  await refreshLibrary();
+  viewer.scrollTop = 0;
+  const panel = h('div', { class: 'zy-section' });
+  viewer.replaceChildren(panel);
+  generateAiBtn.disabled = true;
+  try {
+    await runGeneration(panel, sections, Number(genCountSelect.value));
+  } finally {
+    updateStartButton();
+  }
 });
 
 /* ---------- Import ---------- */
@@ -284,3 +328,4 @@ importInput.addEventListener('change', async () => {
 });
 
 void refreshLibrary();
+void mountAiSettings($('ai-settings'));

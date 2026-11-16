@@ -62,8 +62,15 @@ export function checkAnswer(input: string, spec: AnswerSpec): boolean {
     }
     case 'choice':
       return input === spec.correct;
-    case 'text':
-      return spec.answers.some((a) => normalizeText(a, spec.caseSensitive) === normalizeText(input, spec.caseSensitive));
+    case 'text': {
+      const typed = parseNumber(input);
+      return spec.answers.some((a) => {
+        if (normalizeText(a, spec.caseSensitive) === normalizeText(input, spec.caseSensitive)) return true;
+        // "1.5" and "1.50" are the same answer.
+        const n = parseNumber(a);
+        return n !== null && typed !== null && n === typed;
+      });
+    }
   }
 }
 

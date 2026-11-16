@@ -1,25 +1,32 @@
 // A practice session: one new version of every challenge level in the chosen
-// sections, in book, shuffled or weakest-first order, then a summary.
+// sections, plus their saved AI-generated problems, in book, shuffled or
+// weakest-first order, then a summary.
 
+import { figureFor } from '../ai/generate';
+import type { StoredAiProblem } from '../ai/store';
 import type { ChallengeBlock, Section } from '../core/model';
 import { sectionLabel } from '../core/model';
 import { itemKey, loadProgress, orderItems, recordOutcome, type SessionOrder } from '../core/progress';
+import { aiSource } from './aiSource';
 import { h, typeset } from './dom';
-import { createProblemView, type Outcome, type ProblemView } from './problemView';
+import { challengeSource, createProblemView, type Outcome, type ProblemView } from './problemView';
 
-export interface SessionItem {
-  key: string;
-  book: string;
-  section: Section;
-  block: ChallengeBlock;
-  level: number;
-}
+export type SessionItem = { key: string; book: string; section: Section } & (
+  | { kind: 'challenge'; block: ChallengeBlock; level: number }
+  | { kind: 'ai'; problem: StoredAiProblem }
+);
 
-export function sessionItems(sections: Section[]): SessionItem[] {
-  return sections.flatMap((section) =>
-    section.blocks.flatMap((block) =>
+const KIND_LABEL = { multiple_choice: 'multiple choice', short_answer: 'short answer', numeric: 'numeric' } as const;
+
+export const aiItemKey = (p: StoredAiProblem) => `${p.section}:ai:${p.id}`;
+
+export function sessionItems(sections: Section[], aiProblems: StoredAiProblem[] = []): SessionItem[] {
+  return sections.flatMap((section): SessionItem[] => {
+    const label = sectionLabel(section);
+    const challenges = section.blocks.flatMap((block): SessionItem[] =>
       block.kind === 'challenge'
         ? block.levels.map((_, level) => ({
+            kind: 'challenge',
             key: itemKey(section.chapter, section.section, block.id, level),
             book: section.book,
             section,
@@ -27,8 +34,13 @@ export function sessionItems(sections: Section[]): SessionItem[] {
             level,
           }))
         : [],
-    ),
-  );
+    );
+    const ai = aiProblems
+      .filter((p) => p.book === section.book && p.section === label)
+      .map((problem): SessionItem => ({ kind: 'ai', key: aiItemKey(problem), book: section.book, section, problem }));
+    // Book order: AI problems after the section's challenge activities.
+    return [...challenges, ...ai];
+  });
 }
 
 interface Done {
@@ -41,8 +53,9 @@ export async function runSession(
   sections: Section[],
   order: SessionOrder,
   onExit: () => void,
+  aiProblems: StoredAiProblem[] = [],
 ): Promise<void> {
-  const all = sessionItems(sections);
+  const all = sessionItems(sections, aiProblems);
   const books = [...new Set(all.map((i) => i.book))];
   const progress = Object.assign({}, ...(await Promise.all(books.map(loadProgress))));
   const queue = orderItems(all, progress, order);
@@ -54,7 +67,7 @@ export async function runSession(
         'div',
         { class: 'empty' },
         h('h2', {}, 'Nothing to practice yet'),
-        h('p', {}, `The selected sections (${labels}) have no challenge activities. AI-generated problems from the reading and participation activities are coming next.`),
+        h('p', {}, `The selected sections (${labels}) have no challenge activities and no AI-generated problems yet. Generate some with AI first.`),
         backButton(onExit),
       ),
     );
@@ -111,18 +124,31 @@ export async function runSession(
       summary();
       return;
     }
-    const { section, block, level } = item;
-    source.replaceChildren(
-      h('span', { class: 'zy-session__section' }, `${sectionLabel(section)} ${section.title}`),
-      ' · ',
-      h('span', {}, block.caption),
-      block.levels.length > 1 ? ` · Level ${level + 1} of ${block.levels.length}` : '',
-    );
+    const { section } = item;
+    const sectionEl = h('span', { class: 'zy-session__section' }, `${sectionLabel(section)} ${section.title}`);
+    if (item.kind === 'challenge') {
+      const { block, level } = item;
+      source.replaceChildren(
+        sectionEl,
+        ' · ',
+        h('span', {}, block.caption),
+        block.levels.length > 1 ? ` · Level ${level + 1} of ${block.levels.length}` : '',
+      );
+    } else {
+      source.replaceChildren(
+        sectionEl,
+        ' · ',
+        h('span', { class: 'zy-ai-badge' }, 'AI-generated'),
+        ` ${KIND_LABEL[item.problem.problem.kind]} · based on ${item.problem.problem.based_on}`,
+      );
+    }
     typeset(source);
     nextBtn.textContent = 'Skip';
     nextBtn.classList.add('secondary');
-    view = createProblemView(block, level, {
-      onChange: (o) => {
+    const problemSource =
+      item.kind === 'challenge' ? challengeSource(item.block, item.level) : aiSource(item.problem, figureFor(item.problem.problem, [section]));
+    view = createProblemView(problemSource, {
+      onChange: (o: Outcome) => {
         if (!o.attempted) return;
         nextBtn.textContent = index + 1 < queue.length ? 'Next problem →' : 'Finish';
         nextBtn.classList.remove('secondary');
@@ -148,7 +174,7 @@ export async function runSession(
     }
 
     const again = h('button', { type: 'button' }, 'Practice weakest again') as HTMLButtonElement;
-    again.addEventListener('click', () => void runSession(container, sections, 'weakest', onExit));
+    again.addEventListener('click', () => void runSession(container, sections, 'weakest', onExit, aiProblems));
 
     const table = bySection.size
       ? h(

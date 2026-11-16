@@ -11,7 +11,7 @@ except to zyBooks itself, and later to the AI provider you choose.
 - [x] Milestone 1: capture sections from zyBooks and view what was captured
 - [x] Milestone 2: new versions of challenge activities from the book's generator code
 - [x] Milestone 3: practice sessions across sections, with progress tracking
-- [ ] Milestone 4: AI-generated problems (Claude), with a book-only grounding check
+- [x] Milestone 4: AI-generated problems (Claude), with a book-only grounding check
 - [ ] Milestone 5: more AI providers, generated diagrams
 
 ## Build
@@ -51,6 +51,27 @@ To practice several sections at once, tick them in the library, choose an order
 (weakest first, shuffled, or book order) and click **Practice**. A session deals one new
 version of every challenge level in those sections and ends with a summary. Results are
 saved locally per book, and "weakest first" uses them to bring back what you missed.
+
+## AI-generated problems
+
+Open **AI settings** at the bottom of the sidebar, choose a provider (Claude for now) and
+paste your API key. The key is stored only in this browser and sent only to that provider.
+
+Then either open a section and use **Generate with AI** at the end of it, or tick several
+sections in the library and click **Generate AI problems**. Each run:
+
+1. Sends the captured sections (text, tables, figure descriptions and images, the book's
+   activities and one worked instance of each challenge level) as the only allowed source.
+2. Asks the generator model for multiple-choice, short-answer and numeric problems in the
+   book's style. Numeric problems come with Python that randomizes values and computes the
+   answers, so the answer key is computed, not guessed, and every practice gets new numbers.
+3. Checks each problem locally: structure, its code runs and produces numbers for every
+   answer, and its quoted supporting passage really appears in the book.
+4. Asks the reviewer model to reject anything that uses outside knowledge, has a wrong
+   answer, or is unclear. Only problems that pass are saved.
+
+Saved problems appear under each section and in practice sessions. The result panel shows
+what was rejected and why, plus token usage and an estimated cost.
 
 ## Tests with real data
 

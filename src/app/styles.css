@@ -223,3 +223,45 @@ label.library__book { display: flex; align-items: center; gap: 6px; cursor: poin
 .zy-session__table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 0.95rem; }
 .zy-session__table th, .zy-session__table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .zy-session__table td:last-child, .zy-session__table th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- AI ---------- */
+
+details.panel > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+details.panel > summary::before { content: '▸'; color: var(--muted); font-size: 0.8rem; }
+details.panel[open] > summary::before { content: '▾'; }
+details.panel > summary h2 { display: inline; }
+.ai-settings { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.ai-settings select, .gen-start select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+label.check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; cursor: pointer; }
+label.check input { margin-top: 3px; accent-color: var(--accent); }
+.gen-start { display: flex; gap: 8px; }
+.gen-start button { flex: 1; }
+
+.zy-card--ai { border-left-color: var(--animation); }
+.zy-card--ai .zy-card__kind { color: var(--animation); }
+.zy-ai-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--animation); border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; }
+.zy-ai-list { list-style: none; margin: 8px 0; padding: 0; }
+.zy-ai-item { border-top: 1px solid var(--border); padding: 10px 0; }
+.zy-ai-item__head { display: flex; align-items: center; gap: 10px; }
+.zy-ai-item__preview { flex: 1; min-width: 0; font-size: 0.92rem; }
+.zy-ai-item__head button.secondary { padding: 4px 10px; }
+.zy-ai-item__basis { margin: 4px 0 0; }
+.zy-ai-item .zy-problem { margin-top: 10px; }
+
+.zy-practice__choices { margin: 8px 0; }
+.zy-choice-list { display: flex; flex-direction: column; gap: 6px; }
+.zy-choice { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.zy-choice:has(input:checked) { border-color: var(--accent); }
+.zy-choice input { margin-top: 4px; accent-color: var(--accent); }
+.zy-choice__text { flex: 1; }
+.zy-choice__feedback { flex: 1; font-size: 0.92rem; }
+
+.zy-gen { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 14px 16px; margin: 12px 0; }
+.zy-gen h3 { margin: 0 0 8px; font-size: 1rem; }
+.zy-gen__steps { margin: 0 0 10px; padding-left: 20px; font-size: 0.9rem; color: var(--muted); }
+.zy-gen__steps li[data-active] { color: var(--text); font-weight: 600; }
+.zy-gen__steps li[data-active]::after { content: ' …'; animation: zy-blink 1s steps(2) infinite; }
+@keyframes zy-blink { 50% { opacity: 0; } }
+.zy-gen__rejected { margin-top: 8px; font-size: 0.9rem; }
+.zy-gen__rejected li { margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { .zy-gen__steps li[data-active]::after { animation: none; } }
