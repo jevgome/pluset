@@ -38,7 +38,9 @@ function toContent(req: JsonRequest): Anthropic.Beta.BetaContentBlockParam[] {
   return req.content.map((part): Anthropic.Beta.BetaContentBlockParam =>
     part.type === 'text'
       ? { type: 'text', text: part.text, ...(part.cacheable ? { cache_control: { type: 'ephemeral' } } : {}) }
-      : { type: 'image', source: { type: 'base64', media_type: part.mediaType, data: part.data } },
+      : part.type === 'image'
+        ? { type: 'image', source: { type: 'base64', media_type: part.mediaType, data: part.data } }
+        : { type: 'document', source: { type: 'base64', media_type: part.mediaType, data: part.data }, ...(part.title ? { title: part.title } : {}) },
   );
 }
 

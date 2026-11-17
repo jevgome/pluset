@@ -1,0 +1,61 @@
+/* Printed cheat sheet pages. Used both in the app preview and in the downloaded or
+   printed file, so colors are fixed (always dark ink on white paper). */
+
+.cs-pages { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+
+.cs-page {
+  position: relative; box-sizing: border-box; flex: none;
+  width: var(--cs-w); height: var(--cs-h); padding: 0.28in 0.3in;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; color: #111;
+  font: var(--cs-font, 7pt)/1.22 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+/* A hair under the paper size so a page never spills onto an extra printed page. */
+.cs-page--letter { --cs-w: 8.5in; --cs-h: 10.98in; }
+.cs-page--a4 { --cs-w: 210mm; --cs-h: 296.5mm; }
+
+.cs-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; border-bottom: 1.2px solid #111; padding-bottom: 0.15em; margin-bottom: 0.35em; }
+.cs-title { font-size: 1.55em; font-weight: 700; }
+.cs-meta { font-size: 0.85em; color: #555; text-align: right; }
+
+.cs-cols {
+  flex: 1; min-height: 0; overflow: hidden;
+  column-count: var(--cs-cols, 4); column-gap: 0.14in; column-rule: 0.5px solid #bbb; column-fill: auto;
+}
+
+.cs-block { break-inside: avoid; }
+.cs-group {
+  font-weight: 700; font-size: 1.05em; text-transform: uppercase; letter-spacing: 0.03em;
+  background: #e4e4e4; padding: 0.1em 0.3em; margin: 0.3em 0 0.15em;
+}
+.cs-block:first-child .cs-group { margin-top: 0; }
+.cs-item { position: relative; break-inside: avoid; padding: 0.12em 0 0.22em; border-bottom: 0.5px dotted #c8c8c8; }
+.cs-name { font-weight: 700; }
+.cs-src { font-weight: 400; color: #777; font-size: 0.82em; margin-left: 0.35em; }
+.cs-eq { position: relative; margin: 0.05em 0; overflow: hidden; } /* clips KaTeX's hidden MathML too */
+.cs-eq .katex-display { margin: 0.12em 0; }
+.cs-eq .katex { font-size: 1.12em; }
+.cs-text { color: #222; }
+.cs-item--definition .cs-text, .cs-item--concept .cs-text { display: inline; }
+.cs-cond { margin: 0.05em 0 0; padding-left: 0.9em; color: #333; font-style: italic; }
+.cs-cond li { margin: 0; }
+.cs-cond li::marker { content: '▸ '; font-style: normal; color: #888; }
+.cs-text .katex, .cs-cond .katex, .cs-name .katex { font-size: 1.05em; }
+
+/* Preview only. */
+.cs-remove {
+  position: absolute; top: 0; right: 0; display: none;
+  font: 600 11px/1 system-ui, sans-serif; padding: 2px 5px; border-radius: 3px;
+  border: 1px solid #b42318; background: #fff; color: #b42318; cursor: pointer;
+}
+.cs-item:hover .cs-remove, .cs-remove:focus-visible { display: block; }
+.cs-page--over { outline: 3px dashed #b42318; outline-offset: -3px; }
+.cs-over-label {
+  position: absolute; top: 4px; right: 8px; z-index: 1;
+  font: 700 11px/1.3 system-ui, sans-serif; color: #fff; background: #b42318; padding: 2px 6px; border-radius: 3px;
+}
+/* A long equation wrapped onto several lines (inline mode breaks at = and +). */
+.cs-eq--wrap { padding: 0.15em 0 0.15em 0.6em; text-indent: -0.6em; line-height: 1.9; }
+.cs-eq--wrap .katex { text-indent: 0; }
+.cs-nobr { white-space: nowrap; }

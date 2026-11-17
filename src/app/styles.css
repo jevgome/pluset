@@ -265,3 +265,19 @@ label.check input { margin-top: 3px; accent-color: var(--accent); }
 .zy-gen__rejected { margin-top: 8px; font-size: 0.9rem; }
 .zy-gen__rejected li { margin: 6px 0; }
 @media (prefers-reduced-motion: reduce) { .zy-gen__steps li[data-active]::after { animation: none; } }
+
+/* ---------- Cheat sheet ---------- */
+
+.cs-panel .field input[type='text'] { width: 100%; }
+.cs-panel select, .cs-toolbar select { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.cs-panel { display: flex; flex-direction: column; gap: 10px; }
+.cs-panel h3 { margin: 0; }
+.cs-file { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cs-options, .cs-actions, .cs-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.cs-saved-wrap summary { cursor: pointer; font-size: 0.9rem; color: var(--muted); }
+.cs-saved { list-style: none; margin: 6px 0 0; padding: 0; }
+.cs-saved li { display: flex; align-items: center; gap: 4px; }
+.cs-output:empty { display: none; }
+.cs-output { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.cs-preview { overflow-x: auto; padding: 16px 0; background: var(--surface-2); border-radius: var(--radius); }
+.cs-preview .cs-page { box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }

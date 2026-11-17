@@ -12,6 +12,7 @@ import { runSession } from './session';
 import { mountAiSettings } from './aiSettingsPanel';
 import { aiSectionPanel } from './aiSectionPanel';
 import { runGeneration } from './aiGenerate';
+import { mountCheatSheet, type CheatSheetPanel } from './cheatSheetPanel';
 import { listAiProblems } from '../ai/store';
 import type { SessionOrder } from '../core/progress';
 import type { Section } from '../core/model';
@@ -36,8 +37,11 @@ const startPracticeBtn = $<HTMLButtonElement>('start-practice');
 const includeAiBox = $<HTMLInputElement>('include-ai');
 const generateAiBtn = $<HTMLButtonElement>('generate-ai');
 const genCountSelect = $<HTMLSelectElement>('gen-count');
+const cheatSheetBtn = $<HTMLButtonElement>('cheat-sheet');
 
 let session: ZySession | null = null;
+/** The open cheat sheet panel, told when the ticked sections change. */
+let cheatSheet: { panel: CheatSheetPanel; el: HTMLElement } | null = null;
 let openKey: string | null = null;
 /** Sections ticked for practice (metaKey). */
 const selected = new Set<string>();
@@ -247,6 +251,7 @@ function updateStartButton() {
   generateAiBtn.disabled = selected.size === 0;
   generateAiBtn.textContent = selected.size ? `Generate AI problems for ${selected.size}` : 'Generate AI problems';
   startPracticeBtn.textContent = selected.size ? `Practice ${selected.size} section${selected.size === 1 ? '' : 's'}` : 'Practice selected';
+  if (cheatSheet?.el.isConnected) cheatSheet.panel.refreshSections();
 }
 
 async function selectedSections(): Promise<Section[]> {
@@ -302,6 +307,17 @@ generateAiBtn.addEventListener('click', async () => {
   } finally {
     updateStartButton();
   }
+});
+
+/* ---------- Cheat sheet ---------- */
+
+cheatSheetBtn.addEventListener('click', async () => {
+  openKey = null;
+  await refreshLibrary();
+  viewer.scrollTop = 0;
+  const el = h('div', { class: 'zy-section' });
+  viewer.replaceChildren(el);
+  cheatSheet = { el, panel: mountCheatSheet(el, selectedSections) };
 });
 
 /* ---------- Import ---------- */

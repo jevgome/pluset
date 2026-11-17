@@ -83,6 +83,26 @@ sections in the library and click **Generate AI problems**. Each run:
 Saved problems appear under each section and in practice sessions. The result panel shows
 what was rejected and why, plus token usage and an estimated cost.
 
+## Cheat sheets
+
+Click **Make a cheat sheet** in the sidebar. Choose your study guide (PDF, Word .docx, text,
+Markdown/LaTeX, or an image) and/or tick sections in the library, optionally say what to cover
+("Exam 2 topics only"), and click **Make cheat sheet**. The model chosen in AI settings writes a
+sheet that is mostly equations, each with the assumptions and conditions for using it and its
+special-case forms, plus the key definitions and concepts. It uses only your study guide and the
+ticked sections. The study guide decides which topics go on it, and the sections supply the
+book's equations and conditions.
+
+The sheet is laid out on at most two pages (Letter or A4, 3 to 5 columns) at the largest font
+that fits, never below 6 pt. Long equations wrap instead of shrinking. If it still doesn't fit,
+the extra items are marked and left out of downloads; hover over any item and click × to remove
+it, and the rest re-flows. **Download PDF** opens the print dialog (choose "Save as PDF");
+**Download HTML** saves a self-contained file that works offline. Sheets are saved locally and
+can be reopened from **Saved cheat sheets**.
+
+With the Claude API the model reads PDF and image study guides directly. Claude Code gets the
+file's text, so scanned PDFs and images need the Claude API.
+
 ## Show answer buttons on zyBooks pages
 
 On any section page at learn.zybooks.com, each question of a participation activity gets

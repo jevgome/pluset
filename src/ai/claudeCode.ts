@@ -44,7 +44,7 @@ export function claudeCodeProvider(opts: ClaudeCodeOptions): AiProvider {
     label: 'Claude Code (your Claude plan)',
     models: CLAUDE_CODE_MODELS,
     async requestJson(req: JsonRequest): Promise<JsonResponse> {
-      // Claude Code receives one text prompt; images aren't passed (figure descriptions are in the text).
+      // Claude Code receives one text prompt; images and PDFs aren't passed (callers send their text instead).
       const prompt = req.content.flatMap((p) => (p.type === 'text' ? [p.text] : [])).join('\n\n');
       const res = await call(opts, '/v1/json', {
         method: 'POST',

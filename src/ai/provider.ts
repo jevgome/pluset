@@ -4,7 +4,9 @@
 
 export type ContentPart =
   | { type: 'text'; text: string; /** Large, reused prefix (book material): cache it if the provider can. */ cacheable?: boolean }
-  | { type: 'image'; mediaType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string /* base64 */ };
+  | { type: 'image'; mediaType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string /* base64 */ }
+  /** A PDF the model reads directly (pages as text and images). Providers that can't read PDFs skip it. */
+  | { type: 'document'; mediaType: 'application/pdf'; data: string /* base64 */; title?: string };
 
 export interface JsonRequest {
   model: string;
