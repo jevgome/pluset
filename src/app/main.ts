@@ -283,7 +283,6 @@ startPracticeBtn.addEventListener('click', async () => {
     () => {
       showEmpty();
       void refreshLibrary();
-void mountAiSettings($('ai-settings'));
     },
     ai,
   );
